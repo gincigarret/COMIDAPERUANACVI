@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Resumen del Pedido">
+    <title>Resumen del Pedido</title>
+    <link rel="shortcut icon" type="image/png" href="faviconn.png">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:400,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/all.min.css">
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/custom.css">
+    <style>
+        .total-amount,
+        .total-pedido .decimal,
+        .delivery-cost,
+        .tip-total {
+            color: red;
+        }
+        .decimal {
+            color: red;
+        }
+        #delivery-btn {
+            background-color: red;
+            border-color: red;
+        }
+        .floating-bill-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #8B0000;
+            color: #ffffff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 1000;
+        }
+        .bill-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+        }
+        .bill-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .bill-modal-body {
+            margin-bottom: 10px;
+        }
+        .close-bill-modal {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <div class="loader-inner">
+            <div class="circle"></div>
+        </div>
+    </div>
+    <div class="top-header-area" id="sticker">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 col-sm-12 text-center">
+                    <div class="main-menu-wrap">
+                        <nav class="main-menu">
+                            <ul></ul>
+                        </nav>
+                        <div class="mobile-menu"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pedidos-section pedidos-bg">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 offset-lg-2 text-center">
+                    <div class="pedidos-text">
+                        <h1>TU PEDIDO</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="table-container">
+        <div class="table-responsive">
+            <table id="order-summary">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Cantidad</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Los elementos del pedido se añadirán aquí -->
+                </tbody>
+            </table>
+            <div class="total-container">
+                <h2>Total: $<span id="total-amount" class="total-amount">0.000</span></h2>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Formulario de datos -->
+    <div class="container">
+        <form id="order-form">
+            <div class="form-group">
+                <label for="full-name">Ingresa tu nombre completo *</label>
+                <input type="text" id="full-name" name="full-name" class="form-control" placeholder="Nombre Apellido" required>
+            </div>
+            <div class="form-group">
+                <label for="phone-number">Ingresa tu teléfono de contacto *</label>
+                <input type="tel" id="phone-number" name="phone-number" class="form-control" placeholder="987654321" required>
+            </div>
+            <div class="form-group">
+                <label for="message">INGRESA TU DIRECCION</label>
+                <textarea id="message" name="message" class="form-control"></textarea>
+            </div>
+            <h2>Total del Pedido: $<span id="total-pedido" class="total-pedido"><span class="decimal">0.000</span></span></h2>
+        </form>
+    </div>
+    
+    <!-- Botón flotante para mostrar la boleta -->
+    <button class="floating-bill-btn" id="show-bill">Ver Boleta</button>
+    
+    <!-- Boleta Modal -->
+    <div class="bill-modal" id="bill-modal">
+        <div class="bill-modal-header">
+            <h2>Boleta Electrónica</h2>
+            <button class="close-bill-modal" id="close-bill">&times;</button>
+        </div>
+        <div class="bill-modal-body" id="bill-content">
+            <!-- Contenido de la boleta será generado dinámicamente -->
+        </div>
+        <button id="download-bill">Descargar Boleta</button>
+    </div>
+    
+    <script src="assets/js/jquery-1.11.3.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="assets/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const showBillBtn = document.getElementById('show-bill');
+            const billModal = document.getElementById('bill-modal');
+            const closeBillBtn = document.getElementById('close-bill');
+            const downloadBillBtn = document.getElementById('download-bill');
+            const billContent = document.getElementById('bill-content');
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderItems = [];
+            
+            // Cargar elementos del pedido desde URL
+            urlParams.forEach((value, key) => {
+                if (key === 'name') {
+                    orderItems.push({ name: value });
+                } else if (key === 'quantity') {
+                    orderItems[orderItems.length - 1].quantity = parseInt(value);
+                } else if (key === 'price') {
+                    orderItems[orderItems.length - 1].price = parseFloat(value.replace('$', '').trim());
+                }
+            });
+            
+            const tbody = document.querySelector('#order-summary tbody');
+            let total = 0;
+            
+            function calcularTotalPedido() {
+                tbody.innerHTML = ''; // Clear existing rows
+                total = 0;
+                
+                orderItems.forEach((item, index) => {
+                    const tr = document.createElement('tr');
+                    const subtotal = item.quantity * item.price;
+                    total += subtotal;
+                    
+                    tr.innerHTML = `
+                        <td>${item.name}</td>
+                        <td class="precio">$${item.price.toFixed(3)}</td>
+                        <td>
+                            <div class="modal-quantity-section">
+                                <div class="modal-quantity-selector">
+                                    <button class="modal-decrease-btn" data-index="${index}">-</button>
+                                    <input type="number" value="${item.quantity}" min="1" class="modal-quantity-input cantidad" readonly>
+                                    <button class="modal-increase-btn" data-index="${index}">+</button>
+                                </div>
+                            </div>
+                        </td>
+                        <td>$${subtotal.toFixed(3)}</td>
+                    `;
+                    
+                    tbody.appendChild(tr);
+                });
+                
+                document.getElementById('total-amount').textContent = total.toFixed(3);
+                document.getElementById('total-pedido').querySelector('.decimal').textContent = total.toFixed(3);
+            }
+            
+            calcularTotalPedido();
+            
+            
+            tbody.addEventListener('click', function (event) {
+                if (event.target.classList.contains('modal-increase-btn') || event.target.classList.contains('modal-decrease-btn')) {
+                    const index = event.target.getAttribute('data-index');
+                    if (event.target.classList.contains('modal-increase-btn')) {
+                        orderItems[index].quantity++;
+                    } else if (orderItems[index].quantity > 1) {
+                        orderItems[index].quantity--;
+                    }
+                    calcularTotalPedido();
+                }
+            });
+            
+            
+            showBillBtn.addEventListener('click', function () {
+                const fullName = document.getElementById('full-name').value;
+                const phoneNumber = document.getElementById('phone-number').value;
+                
+                if (!fullName || !phoneNumber || orderItems.length === 0) {
+                    alert('Por favor complete sus datos y seleccione al menos un producto.');
+                    return;
+                }
+                
+                billContent.innerHTML = `
+                    <p><strong>Nombre:</strong> ${fullName}</p>
+                    <p><strong>Teléfono:</strong> ${phoneNumber}</p>
+                    <p><strong>Total Pedido:</strong> $${total.toFixed(3)}</p>
+                    <h3>Detalles del Pedido:</h3>
+                    <ul>
+                        ${orderItems.map(item => `<li>${item.name} - Cantidad: ${item.quantity} - Precio: $${(item.price * item.quantity).toFixed(3)}</li>`).join('')}
+                    </ul>
+                `;
+                
+                billModal.style.display = 'block';
+            });
+            
+            // Cerrar boleta
+            closeBillBtn.addEventListener('click', function () {
+                billModal.style.display = 'none';
+            });
+            
+            // Descargar boleta en formato de texto
+            downloadBillBtn.addEventListener('click', function () {
+                const billText = `
+                    Nombre: ${document.getElementById('full-name').value}\n
+                    Teléfono: ${document.getElementById('phone-number').value}\n
+                    Total Pedido: $${total.toFixed(3)}\n
+                    Detalles del Pedido:\n
+                    ${orderItems.map(item => `${item.name} - Cantidad: ${item.quantity} - Precio: $${(item.price * item.quantity).toFixed(3)}`).join('\n')}
+                `;
+                const blob = new Blob([billText], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'boleta.txt';
+                link.click();
+            });
+        });
+    </script>
+</body>
+</html>
